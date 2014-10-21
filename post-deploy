@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+
+set -a #export all subsequently defined variables for template access
+# Bash templating snippet from: http://stackoverflow.com/a/2916159/66771 
+# NOTE: Template variables must be exported (done with set -a above) and placed
+# in brackets (like ${...}) for the regex to process it.
+shopt -s expand_aliases
+alias process_template="perl -p -e 's/\\$\{([^}]+)\}/defined \$ENV{\$1} ? \$ENV{\$1} : \$&/eg'"
+
+echo "-----> Setting up static file deployment..."
+APP="$1"; PORT="$2"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" #this directory
+APP_PATH="$DOKKU_ROOT/$APP"
+APP_ROOT="${APP#*.}"
+STATIC_PATH="static.${APP_ROOT}"
+NGINX_CONF="$DIR/nginx.conf"
+NGINX_CONF_TEMPLATE="$DOKKU_ROOT/$STATIC_PATH/nginx.tpl"
+
+# Abort if STATIC is not found in the main app deployment
+if [ ! -e ${APP_PATH}/STATIC ]; then
+  exit 0 
+fi
+
+# Proceed to clone a copy for static deployment
+if [[ ! -e "$DOKKU_ROOT/$STATIC_PATH" ]]; then
+  cd "$DOKKU_ROOT"
+  mkdir ${STATIC_PATH}
+  git clone "$DOKKU_ROOT/$APP" ./${STATIC_PATH}/app
+fi
+
+cd "$DOKKU_ROOT/$STATIC_PATH" 2>&1
+
+while read line; do
+  STATIC_DESC=($line)
+done < "$APP_PATH/STATIC"  
+
+LOCATION=$(echo ${STATIC_DESC[0]} | sed 's/\./\\./g' | sed 's|\/|\\/|g' | sed 's/\*/\.\*/g')
+ROOT_PATH=${STATIC_DESC[1]}
+
+if [[ -e "$NGINX_CONF_TEMPLATE" ]]; then
+  echo '-----> Overriding default nginx.conf with detected nginx.tpl'
+  NGINX_CONF="$NGINX_CONF_TEMPLATE"
+fi
+cat $NGINX_CONF | process_template > "$DOKKU_ROOT/$STATIC_PATH/nginx.conf"
+
+echo "-----> Running nginx-pre-reload"
+pluginhook nginx-pre-reload $APP $PORT
+echo '-----> Reloading nginx...'
+sudo /etc/init.d/nginx reload > /dev/null
+
+cat #prints output from any plugins chained to this
