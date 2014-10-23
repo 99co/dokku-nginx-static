@@ -27,6 +27,10 @@ if [[ ! -e "$DOKKU_ROOT/$STATIC_PATH" ]]; then
   cd "$DOKKU_ROOT"
   mkdir ${STATIC_PATH}
   git clone "$DOKKU_ROOT/$APP" ./${STATIC_PATH}/app
+
+else
+  cd "$DOKKU_ROOT/$STATIC_PATH/app"
+  git pull --ff-only origin master
 fi
 
 cd "$DOKKU_ROOT/$STATIC_PATH" 2>&1
