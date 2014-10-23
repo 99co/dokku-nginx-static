@@ -30,6 +30,8 @@ if [[ ! -e "$DOKKU_ROOT/$STATIC_PATH" ]]; then
 
 else
   cd "$DOKKU_ROOT/$STATIC_PATH/app"
+  # http://stackoverflow.com/questions/4043609/getting-fatal-not-a-git-repository-when-using-post-update-hook-to-execut
+  unset GIT_DIR
   git pull --ff-only origin master
 fi
 
