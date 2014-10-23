@@ -2,7 +2,7 @@
 set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
 
 set -a #export all subsequently defined variables for template access
-# Bash templating snippet from: http://stackoverflow.com/a/2916159/66771 
+# Bash templating snippet from: http://stackoverflow.com/a/2916159/66771
 # NOTE: Template variables must be exported (done with set -a above) and placed
 # in brackets (like ${...}) for the regex to process it.
 shopt -s expand_aliases
@@ -19,7 +19,7 @@ NGINX_CONF_TEMPLATE="$DOKKU_ROOT/$STATIC_PATH/nginx.tpl"
 
 # Abort if STATIC is not found in the main app deployment
 if [ ! -e ${APP_PATH}/STATIC ]; then
-  exit 0 
+  exit 0
 fi
 
 # Proceed to clone a copy for static deployment
@@ -39,7 +39,7 @@ cd "$DOKKU_ROOT/$STATIC_PATH" 2>&1
 
 while read line; do
   STATIC_DESC=($line)
-done < "$APP_PATH/STATIC"  
+done < "$APP_PATH/STATIC"
 
 LOCATION=$(echo ${STATIC_DESC[0]} | sed 's/\./\\./g' | sed 's|\/|\\/|g' | sed 's/\*/\.\*/g')
 ROOT_PATH=${STATIC_DESC[1]}
