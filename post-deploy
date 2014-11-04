@@ -17,24 +17,42 @@ STATIC_PATH="static.${APP_ROOT}"
 NGINX_CONF="$DIR/nginx.conf"
 NGINX_CONF_TEMPLATE="$DOKKU_ROOT/$STATIC_PATH/nginx.tpl"
 
+
 # Abort if STATIC is not found in the main app deployment
 if [ ! -e ${APP_PATH}/STATIC ]; then
   exit 0
 fi
 
 # Proceed to clone a copy for static deployment
+#if [[ ! -e "$DOKKU_ROOT/$STATIC_PATH" ]]; then
+#  cd "$DOKKU_ROOT"
+#  mkdir ${STATIC_PATH}
+#  git clone "$DOKKU_ROOT/$APP" ./${STATIC_PATH}/app
+#
+#else
+#  cd "$DOKKU_ROOT/$STATIC_PATH/app"
+#  # http://stackoverflow.com/questions/4043609/getting-fatal-not-a-git-repository-when-using-post-update-hook-to-execut
+#  unset GIT_DIR GIT_WORK_TREE
+#  echo $(git rev-list --children --all | grep -P "^$(git rev-parse HEAD)" | awk '{print $2}')
+#  git pull --ff-only origin master
+#fi
+
+cd $APP_PATH
+echo $(git --git-dir="$APP_PATH" show-ref refs/temp/newrev | awk '{print $1}') || "HEAD"
+echo "--"
 if [[ ! -e "$DOKKU_ROOT/$STATIC_PATH" ]]; then
   cd "$DOKKU_ROOT"
-  mkdir ${STATIC_PATH}
-  git clone "$DOKKU_ROOT/$APP" ./${STATIC_PATH}/app
-
-else
+  mkdir -p "$DOKKU_ROOT/$STATIC_PATH/app"
   cd "$DOKKU_ROOT/$STATIC_PATH/app"
-  # http://stackoverflow.com/questions/4043609/getting-fatal-not-a-git-repository-when-using-post-update-hook-to-execut
-  unset GIT_DIR
-  git pull --ff-only origin master
 fi
 
+cd "$DOKKU_ROOT/$STATIC_PATH/app"
+REV=$(git --git-dir="$APP_PATH" show-ref refs/temp/newrev | awk '{print $1}')
+REV=${REV:-'HEAD'}
+git --git-dir="$APP_PATH" config advice.detachedHead false
+git --git-dir="$APP_PATH" --work-tree=. checkout $REV
+git --git-dir="$APP_PATH" config advice.detachedHead true
+git --git-dir="$APP_PATH" update-ref -d refs/temp/newrev
 cd "$DOKKU_ROOT/$STATIC_PATH" 2>&1
 
 while read line; do
