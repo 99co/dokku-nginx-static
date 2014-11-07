@@ -20,6 +20,7 @@ NGINX_CONF_TEMPLATE="$DOKKU_ROOT/$STATIC_PATH/nginx.tpl"
 
 # Abort if STATIC is not found in the main app deployment
 if [ ! -e ${APP_PATH}/STATIC ]; then
+  echo "No STATIC found, skipping static deploy.."
   exit 0
 fi
 
@@ -38,8 +39,6 @@ fi
 #fi
 
 cd $APP_PATH
-echo $(git --git-dir="$APP_PATH" show-ref refs/temp/newrev | awk '{print $1}') || "HEAD"
-echo "--"
 if [[ ! -e "$DOKKU_ROOT/$STATIC_PATH" ]]; then
   cd "$DOKKU_ROOT"
   mkdir -p "$DOKKU_ROOT/$STATIC_PATH/app"
@@ -47,13 +46,15 @@ if [[ ! -e "$DOKKU_ROOT/$STATIC_PATH" ]]; then
 fi
 
 cd "$DOKKU_ROOT/$STATIC_PATH/app"
-REV=$(git --git-dir="$APP_PATH" show-ref refs/temp/newrev | awk '{print $1}')
+REV=$(git --git-dir="$APP_PATH" show-ref refs/temp/newrev | awk '{print $1}') || true
 REV=${REV:-'HEAD'}
+echo "Checking out ${REV}.."
 git --git-dir="$APP_PATH" config advice.detachedHead false
-git --git-dir="$APP_PATH" --work-tree=. checkout $REV
+git --git-dir="$APP_PATH" --work-tree=. checkout -f $REV
 git --git-dir="$APP_PATH" config advice.detachedHead true
 git --git-dir="$APP_PATH" update-ref -d refs/temp/newrev
 cd "$DOKKU_ROOT/$STATIC_PATH" 2>&1
+echo "Checkout done."
 
 while read line; do
   STATIC_DESC=($line)
